@@ -74,7 +74,7 @@ The lung cancer data set represents state-level lung cancer incidence rates in t
 
 ### Context:
 Does a state's mean elevation correlate with its age-adjusted lung cancer incidence rate?
-To answer this, we created a scatterplot to visualize the relationship between a state's mean elevation (in feet) and its age-adjusted lung cancer incidence rate. This helps us see if the data trends upward, downward, or shows no clear relationship.
+This scatterplot shows the relationship between a state's mean elevation (in feet) and its age-adjusted lung cancer incidence rate (per 100,000 people). Each point represents a US state. The dashed trend line slopes downward, suggesting a negative relationship between elevation and lung cancer incidence. In other words, states with higher average elevations tend to have lower lung cancer incidence rates, while states at lower elevations tend to have higher rates. While the relationship is not perfect and there is still variation between states, the overall trend indicates that lung cancer incidence appears to decrease as elevation increases. 
 
 ```{r}
 #| title: "Scatterplot: Incidence vs. Mean Elevation"
@@ -96,7 +96,7 @@ ggplot(df_joined, aes(x = mean_elev_ft, y = AllAge_B_AA_Rate)) +
 
 ### Context:
 Is there a significant difference in lung cancer rates between "High Altitude" and "Low Altitude" states?
-Using a conditional transformation (if_else), we categorized states into "High Altitude" (2,000 ft or above) and "Low Altitude" (under 2,000 ft). This boxplot allows us to compare the median incidence rates and the spread of the data between these two distinct geographic groups.
+This boxplot compares lung cancer incidence rates between states classified as “High Altitude” (2,000 ft or above) and “Low Altitude” (below 2,000 ft). The plot shows that low altitude states generally have higher lung cancer incidence rates, with a higher median and a wider spread of values. In contrast, high altitude states tend to have lower incidence rates, with most values clustered at the lower end of the scale. Although there is still some overlap between the two groups, the difference in medians suggests that states at higher elevations tend to experience lower lung cancer incidence rates compared to states at lower elevations.
 
 ```{r}
 #| title: "Boxplot: Incidence by Altitude Category"
@@ -120,7 +120,7 @@ ggplotly(box_plot)
 
 ### Context:
 Which specific states have the highest lung cancer incidence rates, and how do their elevations compare?
-We isolated the 10 states with the highest overall lung cancer incidence rates. By coloring the bars based on their mean elevation, we can see if these heavily impacted states share similar geographic profiles.
+This bar chart shows the 10 states with the highest lung cancer incidence rates and compares their mean elevations using color. The results show that many of the states with the highest incidence rates, such as Kentucky, West Virginia, Arkansas, and Mississippi, have relatively low average elevations. While there are some variations in elevation among these states, the chart suggests that higher lung cancer incidence tends to appear more often in lower-elevation states. This pattern supports the trend seen in the other visualizations, where states at lower elevations generally show higher lung cancer incidence rates. 
 
 ```{r}
 #| title: "Barplot: Top 10 States with Highest Incidence"
@@ -183,3 +183,4 @@ Our group's main topic of interest is examining the relationship between state e
 #### Coding Notes
 * **Intermediate Tool:** We used `if_else()` to categorize states into High or Low elevation. This allowed us to group our continuous elevation variable into discrete buckets so we could compare their median incidence rates in our Boxplot.
 * **Novel Tool:** We used `parse_number()` from the `readr` package. The original dataset stored elevation as a string with units. We needed to extract just the numbers to plot them on a continuous axis, which basic tools could not do.
+
