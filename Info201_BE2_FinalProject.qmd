@@ -1,0 +1,185 @@
+---
+title: "State Elevation and Lung Cancer Incidence in the U.S."
+author: "Rut Garcia, Skye Song, and Mika Toyoda"
+date: today
+format: 
+  dashboard:
+    embed-resources: true
+    theme: flatly
+    scrolling: true
+---
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(plotly)
+
+# [https://hub.arcgis.com/datasets/5f8c54ba5f9140d58fdc7967783a7727_0/about](https://hub.arcgis.com/datasets/5f8c54ba5f9140d58fdc7967783a7727_0/about)
+lung_cancer_df <- read_csv("NCI_State_Lung_Cancer_Incidence_Rates.csv")
+
+# [https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_elevation](https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_elevation) 
+elevation_df <- read_csv("state_elevation_data.csv")
+
+df_joined <- inner_join(lung_cancer_df, elevation_df, by = c("STATE_NAME" = "state")) %>%
+  filter(!is.na(AllAge_B_AA_Rate)) %>%
+  mutate(
+    mean_elev_ft = parse_number(mean_elev_raw),
+    elevation_category = if_else(mean_elev_ft >= 2000, "High Altitude", "Low Altitude")
+  )
+```
+
+# Introduction & Context
+
+## Column {width=40%}
+
+### Project Overview
+
+#### Topical Overview
+This project investigates the potential correlation between geographic altitude and public health outcomes, specifically lung cancer incidence. We have integrated state-level health data with topographic data to explore environmental patterns that could inform future health policy and resource allocation. 
+
+![Elevation Legend](elevation_legend_0.png)
+
+#### Our Three Big Picture Questions
+To guide our analysis, we are focusing on the following:
+
+**1. Does a state's mean elevation correlate with its age-adjusted lung cancer incidence rate?**
+
+**2. Is there a significant difference in lung cancer rates between "High Altitude" and "Low Altitude" states?**
+
+**3. Which specific states have the highest lung cancer incidence rates, and how do their elevations compare?**
+
+#### Background & Justification
+Research into geographic health disparities often highlights how environmental factors might influence respiratory health. For example, a landmark peer-reviewed study published in the [National Library of Medicine](https://pmc.ncbi.nlm.nih.gov/articles/PMC4304851/) found a strong inverse relationship between elevation and lung cancer, noting that incidence drops by 7.23 cases per 100,000 people for every 1,000-meter rise in elevation. This analysis is important because uncovering environmental correlations can help public health officials better target preventative resources and understand broader spatial health trends.
+
+#### Ethical Questions & Limitations
+A major ethical limitation of this dataset is the potential for ecological fallacy. By looking at state-level averages, we mask local disparities. Furthermore, our data does not account for individual lifestyle factors, such as smoking prevalence, which is the primary driver of lung cancer.
+
+## Column {width=60%}
+
+### Data Context
+
+#### Dataset 1: Lung Cancer Incidence
+The lung cancer dataset comes from the [National Cancer Institute (NCI)](https://hub.arcgis.com/datasets/5f8c54ba5f9140d58fdc7967783a7727_0/about). It measures the age-adjusted lung cancer incidence rates for the population of each state. The dataset includes 51 total recordings (the 50 U.S. states plus Washington D.C.), reflecting data captured over a 5-year span from 2018 to 2022. A major benefit of this sample is that it allows for broad, national comparisons of cancer burdens, but a key shortcoming is that state-level aggregation masks severe, hyper-local disparities at the county or neighborhood level.
+
+#### Dataset 2: State Elevation
+The elevation dataset was sourced from the [United States Geological Survey (USGS) via Wikipedia](https://en.wikipedia.org/wiki/List_of_U.S._states_and_territories_by_elevation). It records the modern, mean topographic elevation above sea level in feet and meters for various U.S. regions. The sample we are using contains 50 recordings representing the 50 contiguous and non-contiguous U.S. states. This sample provides a clean environmental baseline for our health analysis, but its main shortcoming is that a single "mean" elevation average completely flattens the reality of states with extreme topographic variations, like California or Washington.
+
+#### Data Meaning
+The lung cancer data set represents state-level lung cancer incidence rates in the U.S., showing how common cancer is in each state. The elevation data set represents the average elevation of each state above sea level. This is relevant because it allows us to examine whether geographic or environmental factors, such as altitude, might be related to differences in lung cancer rates across states.
+
+# Q1: Overall Trend
+
+### Context:
+Does a state's mean elevation correlate with its age-adjusted lung cancer incidence rate?
+To answer this, we created a scatterplot to visualize the relationship between a state's mean elevation (in feet) and its age-adjusted lung cancer incidence rate. This helps us see if the data trends upward, downward, or shows no clear relationship.
+
+```{r}
+#| title: "Scatterplot: Incidence vs. Mean Elevation"
+#| warning: false
+#| message: false
+
+ggplot(df_joined, aes(x = mean_elev_ft, y = AllAge_B_AA_Rate)) +
+  geom_point(color = "steelblue", size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
+  labs(
+    x = "Mean State Elevation (Feet)",
+    y = "Lung Cancer Incidence Rate (per 100,000 people)"
+  ) +
+  theme_minimal()
+
+```
+
+# Q2: Altitude Categories
+
+### Context:
+Is there a significant difference in lung cancer rates between "High Altitude" and "Low Altitude" states?
+Using a conditional transformation (if_else), we categorized states into "High Altitude" (2,000 ft or above) and "Low Altitude" (under 2,000 ft). This boxplot allows us to compare the median incidence rates and the spread of the data between these two distinct geographic groups.
+
+```{r}
+#| title: "Boxplot: Incidence by Altitude Category"
+#| warning: false
+#| message: false
+
+box_plot <- ggplot(df_joined, aes(x = elevation_category, y = AllAge_B_AA_Rate, fill = elevation_category)) +
+  geom_boxplot(alpha = 0.8) +
+  scale_fill_manual(values = c("High Altitude" = "skyblue", "Low Altitude" = "orange")) +
+  labs(
+    x = "Elevation Category",
+    y = "Age-Adjusted Incidence Rate",
+    fill = "Category"
+  ) +
+  theme_minimal()
+
+ggplotly(box_plot)
+```
+
+# Q3: Top States
+
+### Context:
+Which specific states have the highest lung cancer incidence rates, and how do their elevations compare?
+We isolated the 10 states with the highest overall lung cancer incidence rates. By coloring the bars based on their mean elevation, we can see if these heavily impacted states share similar geographic profiles.
+
+```{r}
+#| title: "Barplot: Top 10 States with Highest Incidence"
+#| warning: false
+#| message: false
+
+df_joined %>%
+  slice_max(order_by = AllAge_B_AA_Rate, n = 10) %>%
+  ggplot(aes(x = reorder(STATE_NAME, AllAge_B_AA_Rate), y = AllAge_B_AA_Rate, fill = mean_elev_ft)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(
+    x = "State",
+    y = "Incidence Rate",
+    fill = "Mean Elev. (ft)"
+  ) +
+  theme_minimal()
+```
+
+# Data Quality
+
+## Column {width=100%}
+
+Data Documentation:
+To document the structure of our data, we first examined the dimensions and key variables of both datasets. The lung cancer dataset contains 51 rows, while the elevation dataset contains 50 rows representing the US states. Using an inner_join() by state name, we combined the two datasets into a single dataset with 50 rows.
+
+An anti_join() check confirmed that Washington DC is present in the lung cancer dataset but not in the elevation dataset, which explains why it is excluded from the joined dataset.
+
+We then verified the structure of the combined dataset using glimpse() and confirmed that each row represents one US state. Additional checks ensured that there were no duplicate states. We noted that the lung cancer dataset contains missing values in 3 rows; they appear in age-specific variables, suggesting that age-related statistics were unavailable or suppressed for those states.
+
+Finally, the original elevation data (mean_elev_raw) came as a character string containing both feet and meters (e.g., "500 ft 150 m"). To perform mathematical analysis, we needed to clean this column by extracting just the numeric value for feet using parse_number.
+
+# Group & Conclusion
+
+## Column {width=50%}
+
+### Conclusions
+
+#### Summary Takeaways
+Based on our analysis, we observed three major takeaways. First, the scatterplot indicates a potential negative trend: states with higher mean elevations tend to show slightly lower lung cancer incidence rates. Second, when categorizing the data, "Low Altitude" states displayed a noticeably wider spread and higher median incidence rate. Finally, the majority of the top 10 states with the highest incidence rates fall into the lower-elevation gradient, suggesting regional clustering. 
+
+#### Bias Assessment
+We believe this data exploration is likely overestimating the protective effect of elevation. By looking purely at state-wide geographic averages, we are omitting the most critical variable in lung cancer: smoking prevalence. Many high-altitude Western states historically have lower smoking rates than lower-altitude Southern or Midwestern states. 
+
+#### Future Directions
+To better answer our big-picture questions, future research must incorporate behavioral and localized data. Bringing in county-level incidence rates, alongside behavioral health data, would allow us to build a robust multi-variable model.
+
+## Column {width=50%}
+
+### Group Information
+
+Our group's main topic of interest is examining the relationship between state elevation and lung cancer incidence in the U.S., with a focus on how geographic factors may contribute to health disparities. We are part of the BE, 10:30am lab section, led by Runa He.
+
+#### Group Members
+* **Rut Garcia** (rutg@uw.edu) is interested in understanding how geographic and environmental variables may shape health disparities across U.S. states. I'm interested in data analysis because understanding patterns, especially through visualizations like plots, helps show a better picture of how real-world issues affect people's lives, and whether meaningful change is needed.
+* **Mika Toyoda** (mtoyoda1@uw.edu) is interested in bridging the gap between human experiences and technology. As a Medical Anthropology & Global Health major planning to minor in Informatics, I’m really interested in using tools like R to dive into demographic data and map out spatial and environmental health disparities. Ultimately, I want to take those insights and apply them to a career in health informatics and global health policy.
+* **Skye Song** (ssong@uw.edu) is interested in using data to better understand how public policies and access to resources impact health outcomes in different regions. I'm especially interested in how data-driven advocacy can identify service gaps and inform more equitable public health interventions.
+
+#### Coding Notes
+* **Intermediate Tool:** We used `if_else()` to categorize states into High or Low elevation. This allowed us to group our continuous elevation variable into discrete buckets so we could compare their median incidence rates in our Boxplot.
+* **Novel Tool:** We used `parse_number()` from the `readr` package. The original dataset stored elevation as a string with units. We needed to extract just the numbers to plot them on a continuous axis, which basic tools could not do.
